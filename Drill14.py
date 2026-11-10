@@ -1,3 +1,4 @@
+from math import cos, pi, tau
 from pathlib import Path
 from time import perf_counter
 
@@ -12,18 +13,20 @@ BIRD_COUNT = 10
 DRAW_WIDTH, DRAW_HEIGHT = 60, 55
 ROW_BOTTOMS = (338, 168, 0)
 FRAMES_PER_SECOND = 18
-FLIGHT_SPEED = 240
-LEFT_EDGE = DRAW_WIDTH / 2
-FLIGHT_DISTANCE = WIDTH - DRAW_WIDTH
+MAX_FLIGHT_SPEED = 240  # pixels per second
+FLIGHT_AMPLITUDE = (WIDTH - DRAW_WIDTH) / 2
+FLIGHT_ANGULAR_SPEED = MAX_FLIGHT_SPEED / FLIGHT_AMPLITUDE
 SPRITE_PATH = Path(__file__).resolve().parent / 'bird' / 'bird_animation.png'
 
 
 def flight_pose(elapsed, bird_index):
-    round_trip = 2 * FLIGHT_DISTANCE
-    starting_distance = bird_index * round_trip / BIRD_COUNT
-    distance = (starting_distance + elapsed * FLIGHT_SPEED) % round_trip
-    facing_right = distance < FLIGHT_DISTANCE
-    x = LEFT_EDGE + min(distance, 2 * FLIGHT_DISTANCE - distance)
+    phase_offset = (bird_index + 0.5) * tau / BIRD_COUNT
+    phase = (elapsed * FLIGHT_ANGULAR_SPEED + phase_offset) % tau
+
+    # The derivative of x is A * omega * sin(phase). At each edge,
+    # that velocity reaches zero before changing sign.
+    x = WIDTH / 2 - FLIGHT_AMPLITUDE * cos(phase)
+    facing_right = phase < pi
     frame = (int(elapsed * FRAMES_PER_SECOND) + bird_index) % 14
     row, column = divmod(frame, 5)
     return x, facing_right, column * FRAME_WIDTH, ROW_BOTTOMS[row]
