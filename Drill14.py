@@ -8,7 +8,8 @@ from pico2d import (
 
 WIDTH, HEIGHT = 800, 600
 FRAME_WIDTH, FRAME_HEIGHT = 182, 168
-DRAW_WIDTH, DRAW_HEIGHT = 91, 84
+BIRD_COUNT = 10
+DRAW_WIDTH, DRAW_HEIGHT = 60, 55
 ROW_BOTTOMS = (338, 168, 0)
 FRAMES_PER_SECOND = 18
 FLIGHT_SPEED = 240
@@ -17,11 +18,13 @@ FLIGHT_DISTANCE = WIDTH - DRAW_WIDTH
 SPRITE_PATH = Path(__file__).resolve().parent / 'bird' / 'bird_animation.png'
 
 
-def flight_pose(elapsed):
-    distance = (elapsed * FLIGHT_SPEED) % (2 * FLIGHT_DISTANCE)
+def flight_pose(elapsed, bird_index):
+    round_trip = 2 * FLIGHT_DISTANCE
+    starting_distance = bird_index * round_trip / BIRD_COUNT
+    distance = (starting_distance + elapsed * FLIGHT_SPEED) % round_trip
     facing_right = distance < FLIGHT_DISTANCE
     x = LEFT_EDGE + min(distance, 2 * FLIGHT_DISTANCE - distance)
-    frame = int(elapsed * FRAMES_PER_SECOND) % 14
+    frame = (int(elapsed * FRAMES_PER_SECOND) + bird_index) % 14
     row, column = divmod(frame, 5)
     return x, facing_right, column * FRAME_WIDTH, ROW_BOTTOMS[row]
 
@@ -39,13 +42,15 @@ def main():
                 ):
                     return
 
-            x, facing_right, frame_x, frame_y = flight_pose(perf_counter() - start)
+            elapsed = perf_counter() - start
             clear_canvas()
-            bird.clip_composite_draw(
-                frame_x, frame_y, FRAME_WIDTH, FRAME_HEIGHT,
-                0, '' if facing_right else 'h', x, HEIGHT / 2,
-                DRAW_WIDTH, DRAW_HEIGHT,
-            )
+            for bird_index in range(BIRD_COUNT):
+                x, facing_right, frame_x, frame_y = flight_pose(elapsed, bird_index)
+                y = (bird_index + 0.5) * HEIGHT / BIRD_COUNT
+                bird.clip_composite_draw(
+                    frame_x, frame_y, FRAME_WIDTH, FRAME_HEIGHT,
+                    0, '' if facing_right else 'h', x, y, DRAW_WIDTH, DRAW_HEIGHT,
+                )
             update_canvas()
             delay(0.01)
     finally:
